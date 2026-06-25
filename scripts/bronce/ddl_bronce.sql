@@ -1,4 +1,6 @@
+CREATE SCHEMA IF NOT EXISTS bronze;
 
+DROP TABLE IF EXISTS bronze.crm_cliente_info;
 
 CREATE TABLE bronze.crm_cliente_info (
     cl_id              INT,
@@ -10,6 +12,8 @@ CREATE TABLE bronze.crm_cliente_info (
     cl_fec_creacion     DATE
 );
 
+DROP TABLE IF EXISTS bronze.crm_product_info;
+
 CREATE TABLE bronze.crm_product_info (
     prd_id       INT,
     prd_key      VARCHAR(50),
@@ -19,6 +23,8 @@ CREATE TABLE bronze.crm_product_info (
     prd_start_dt DATE,
     prd_end_dt   DATE
 );
+
+DROP TABLE IF EXISTS bronze.crm_ventas_detalles;
 
 CREATE TABLE bronze.crm_ventas_detalles (
     vts_ord_num  VARCHAR(50),
@@ -32,16 +38,22 @@ CREATE TABLE bronze.crm_ventas_detalles (
     vts_precio    INT
 );
 
+DROP TABLE IF EXISTS bronze.erp_loc_a101;
+
 CREATE TABLE bronze.erp_loc_a101 (
     cid    VARCHAR(50),
     pais  VARCHAR(50)
 );
+
+DROP TABLE IF EXISTS bronze.erp_cust_az12;
 
 CREATE TABLE bronze.erp_cust_az12 (
     cid    VARCHAR(50),
     fec_nac  DATE,
     gen    VARCHAR(50)
 );
+
+DROP TABLE IF EXISTS bronze.erp_px_cat_g1v2;
 
 CREATE TABLE bronze.erp_px_cat_g1v2 (
     id           VARCHAR(50),
