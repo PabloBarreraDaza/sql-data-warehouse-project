@@ -35,8 +35,6 @@ El proyecto abarca las siguientes áreas:
 - **SQL Server Express** — Servidor ligero para alojar la base de datos.
 - **SSMS** — SQL Server Management Studio, interfaz gráfica para gestionar la base de datos.
 - **Git / GitHub** — Control de versiones y colaboración.
-- **DrawIO** — Diseño de arquitecturas, modelos y diagramas de flujo.
-- **Notion** — Plantilla del proyecto con todas las fases y tareas.
 
 ---
 
