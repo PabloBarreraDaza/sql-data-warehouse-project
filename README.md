@@ -1,6 +1,6 @@
 # Data Warehouse and Analytics Project 🚀
 
-Proyecto completo de data warehousing y analytics, desde la construcción del almacén de datos hasta la generación de insights accionables. Diseñado como proyecto de portfolio, refleja buenas prácticas de ingeniería de datos y analítica.
+Proyecto completo de data warehousing y analytics, desde la construcción del almacén de datos hasta la generación de insights accionables. Diseñado como proyecto de portfolio, refleja buenas prácticas de ingeniería de datos y analísis.
 
 ---
 
@@ -93,9 +93,3 @@ data-warehouse-project/
 ```
 
 
-
----
-
-## 🤝 Contacto
-
-Conéctate en YouTube · LinkedIn · Newsletter
