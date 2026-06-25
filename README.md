@@ -10,7 +10,7 @@ El proyecto sigue la **Medallion Architecture** con tres capas:
 
 | Capa | Descripción |
 |------|-------------|
-| **Bronze** | Datos raw tal como llegan de los sistemas fuente, ingestados desde CSV a SQL Server. |
+| **Bronze** | Datos raw tal como llegan de los sistemas fuente, ingestados desde CSV a Postgres SQL. |
 | **Silver** | Limpieza, estandarización y normalización de datos para prepararlos para el análisis. |
 | **Gold** | Datos listos para el negocio, modelados en esquema estrella para reporting y analítica. |
 
@@ -32,8 +32,7 @@ El proyecto abarca las siguientes áreas:
 ## 🛠️ Herramientas utilizadas
 
 - **Datasets** — Archivos CSV con los datos del proyecto.
-- **SQL Server Express** — Servidor ligero para alojar la base de datos.
-- **SSMS** — SQL Server Management Studio, interfaz gráfica para gestionar la base de datos.
+- **Postgres SQL** — Servidor para alojar la base de datos.
 - **Git / GitHub** — Control de versiones y colaboración.
 
 ---
