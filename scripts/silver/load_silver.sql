@@ -1,4 +1,4 @@
-- =============================================================
+-- =============================================================
 -- Load Silver Layer - CRM: crm_cliente_info
 -- =============================================================
 -- Descripción : Limpieza y transformación de datos de clientes
@@ -91,3 +91,95 @@ WHERE ranking = 1;
 -- Verificar valores de marital_status y genero
 -- SELECT DISTINCT cl_marital_status FROM silver.crm_cliente_info;
 -- SELECT DISTINCT cl_genero FROM silver.crm_cliente_info;
+
+
+-- =============================================================
+-- Load Silver Layer - CRM: crm_product_info
+-- =============================================================
+-- Descripción : Limpieza y transformación de datos de productos
+--               desde Bronze hacia Silver.
+-- Tabla origen : bronze.crm_product_info
+-- Tabla destino: silver.crm_product_info
+-- Transformaciones aplicadas:
+--   1. Extracción de cat_id desde los primeros 5 chars de prd_key
+--   2. Extracción del prd_key real (desde char 7 en adelante)
+--   3. Normalización de prd_line (M/R/S/T → texto legible)
+--   4. Coste NULL → 0
+--   5. Cálculo de prd_end_dt con LEAD() (día anterior al siguiente start)
+-- =============================================================
+
+-- -------------------------------------------------------------
+-- Validación previa
+-- -------------------------------------------------------------
+
+-- Total filas en Bronze
+-- SELECT COUNT(*) FROM bronze.crm_product_info;
+
+-- Revisar valores distintos de prd_line antes de normalizar
+-- SELECT DISTINCT prd_line FROM bronze.crm_product_info;
+
+-- Revisar productos con coste NULL
+-- SELECT * FROM bronze.crm_product_info WHERE prd_coste IS NULL;
+
+-- Revisar estructura de prd_key (debe tener prefijo de 5 chars + guion + key)
+-- SELECT prd_key, SUBSTRING(prd_key, 1, 5) AS cat_raw,
+--        SUBSTRING(prd_key, 7, LENGTH(prd_key)) AS prd_key_clean
+-- FROM bronze.crm_product_info LIMIT 10;
+
+-- -------------------------------------------------------------
+-- Carga a Silver
+-- -------------------------------------------------------------
+
+TRUNCATE TABLE silver.crm_product_info;
+
+INSERT INTO silver.crm_product_info (
+    prd_id,
+    prd_key,
+    prd_nombre,
+    prd_coste,
+    prd_line,
+    prd_start_dt,
+    prd_end_dt
+)
+SELECT
+    prd_id,
+    -- Extrae el prd_key real eliminando el prefijo de categoría (chars 1-6)
+    SUBSTRING(prd_key, 7, LENGTH(prd_key))          AS prd_key,
+    prd_nombre,
+    -- Si el coste es NULL se reemplaza por 0
+    COALESCE(prd_coste, 0)                           AS prd_coste,
+    CASE
+        WHEN UPPER(TRIM(prd_line)) = 'M' THEN 'Mountain'
+        WHEN UPPER(TRIM(prd_line)) = 'R' THEN 'Road'
+        WHEN UPPER(TRIM(prd_line)) = 'S' THEN 'Other Sales'
+        WHEN UPPER(TRIM(prd_line)) = 'T' THEN 'Touring'
+        ELSE 'N/A'
+    END                                              AS prd_line,
+    CAST(prd_start_dt AS DATE)                       AS prd_start_dt,
+    -- Calcula el end_dt como el día anterior al siguiente start_dt del mismo producto
+    CAST(
+        LEAD(prd_start_dt) OVER (
+            PARTITION BY SUBSTRING(prd_key, 7, LENGTH(prd_key))
+            ORDER BY prd_start_dt
+        ) - INTERVAL '1 day'
+    AS DATE)                                         AS prd_end_dt
+FROM bronze.crm_product_info;
+
+-- -------------------------------------------------------------
+-- Validación posterior
+-- -------------------------------------------------------------
+
+-- Verificar filas cargadas
+-- SELECT COUNT(*) FROM silver.crm_product_info;
+
+-- Verificar que prd_line solo tiene valores normalizados
+-- SELECT DISTINCT prd_line FROM silver.crm_product_info;
+
+-- Verificar que no hay costes NULL
+-- SELECT * FROM silver.crm_product_info WHERE prd_coste IS NULL;
+
+-- Verificar lógica de end_dt (end debe ser siempre < siguiente start)
+-- SELECT prd_key, prd_start_dt, prd_end_dt
+-- FROM silver.crm_product_info
+-- WHERE prd_end_dt IS NOT NULL
+-- ORDER BY prd_key, prd_start_dt;
