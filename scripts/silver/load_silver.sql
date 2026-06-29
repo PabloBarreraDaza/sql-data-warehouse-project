@@ -318,3 +318,126 @@ FROM bronze.crm_ventas_detalles;
 -- Verificar que no hay precios ni ventas negativos o nulos
 -- SELECT * FROM silver.crm_ventas_detalles
 -- WHERE vts_precio <= 0 OR vts_sales <= 0;
+
+-- =============================================================
+-- Load Silver Layer - ERP: erp_cust_az12, erp_loc_a101, erp_px_cat_g1v2
+-- =============================================================
+-- Descripción : Limpieza y transformación de tablas ERP
+--               desde Bronze hacia Silver.
+-- Transformaciones aplicadas:
+--   erp_cust_az12  : Elimina prefijo 'NAS' en cid, fechas futuras → NULL,
+--                    normalización de género
+--   erp_loc_a101   : Elimina guiones en cid, normalización de países
+--   erp_px_cat_g1v2: Carga directa sin transformaciones
+-- =============================================================
+
+-- -------------------------------------------------------------
+-- erp_cust_az12
+-- -------------------------------------------------------------
+
+-- Validación previa
+-- Revisar cids con prefijo NAS
+-- SELECT * FROM bronze.erp_cust_az12 WHERE cid LIKE 'NAS%';
+
+-- Revisar fechas de nacimiento futuras
+-- SELECT * FROM bronze.erp_cust_az12 WHERE fec_nac > NOW();
+
+-- Revisar valores distintos de género
+-- SELECT DISTINCT gen FROM bronze.erp_cust_az12;
+
+TRUNCATE TABLE silver.erp_cust_az12;
+
+INSERT INTO silver.erp_cust_az12 (
+    cid,
+    fec_nac,
+    gen
+)
+SELECT
+    -- Elimina prefijo 'NAS' si existe
+    CASE
+        WHEN cid LIKE 'NAS%' THEN SUBSTRING(cid, 4, LENGTH(cid))
+        ELSE cid
+    END AS cid,
+    -- Fechas de nacimiento futuras → NULL
+    CASE
+        WHEN fec_nac > NOW() THEN NULL
+        ELSE fec_nac
+    END AS fec_nac,
+    -- Normalización de género
+    CASE
+        WHEN UPPER(TRIM(gen)) IN ('F', 'FEMALE') THEN 'Female'
+        WHEN UPPER(TRIM(gen)) IN ('M', 'MALE')   THEN 'Male'
+        ELSE 'N/A'
+    END AS gen
+FROM bronze.erp_cust_az12;
+
+-- Validación posterior
+-- SELECT COUNT(*) FROM silver.erp_cust_az12;
+-- SELECT DISTINCT gen FROM silver.erp_cust_az12;
+-- SELECT * FROM silver.erp_cust_az12 WHERE fec_nac IS NULL;
+-- SELECT * FROM silver.erp_cust_az12 WHERE cid LIKE 'NAS%';
+
+-- -------------------------------------------------------------
+-- erp_loc_a101
+-- -------------------------------------------------------------
+
+-- Validación previa
+-- Revisar valores distintos de país antes de normalizar
+-- SELECT DISTINCT pais FROM bronze.erp_loc_a101;
+
+-- Revisar cids con guiones
+-- SELECT * FROM bronze.erp_loc_a101 WHERE cid LIKE '%-%';
+
+TRUNCATE TABLE silver.erp_loc_a101;
+
+INSERT INTO silver.erp_loc_a101 (
+    cid,
+    pais
+)
+SELECT
+    -- Elimina guiones del cid para unificar con otras tablas
+    REPLACE(cid, '-', '') AS cid,
+    -- Normalización de códigos de país a nombres completos
+    CASE
+        WHEN TRIM(pais) = 'DE'             THEN 'Germany'
+        WHEN TRIM(pais) IN ('US', 'USA')   THEN 'United States'
+        WHEN TRIM(pais) = '' OR pais IS NULL THEN 'N/A'
+        ELSE TRIM(pais)
+    END AS pais
+FROM bronze.erp_loc_a101;
+
+-- Validación posterior
+-- SELECT COUNT(*) FROM silver.erp_loc_a101;
+-- SELECT DISTINCT pais FROM silver.erp_loc_a101;
+-- SELECT * FROM silver.erp_loc_a101 WHERE cid LIKE '%-%';
+
+-- -------------------------------------------------------------
+-- erp_px_cat_g1v2
+-- -------------------------------------------------------------
+
+-- Validación previa
+-- SELECT COUNT(*) FROM bronze.erp_px_cat_g1v2;
+-- SELECT DISTINCT cat, subcat FROM bronze.erp_px_cat_g1v2;
+
+TRUNCATE TABLE silver.erp_px_cat_g1v2;
+
+INSERT INTO silver.erp_px_cat_g1v2 (
+    id,
+    cat,
+    subcat,
+    maintenance
+)
+SELECT
+    id,
+    cat,
+    subcat,
+    maintenance
+FROM bronze.erp_px_cat_g1v2;
+
+-- Validación posterior
+-- SELECT COUNT(*) FROM silver.erp_px_cat_g1v2;
+-- SELECT DISTINCT cat FROM silver.erp_px_cat_g1v2;
+
+-- =============================================================
+-- Silver Layer - Carga ERP completada
+-- =============================================================
