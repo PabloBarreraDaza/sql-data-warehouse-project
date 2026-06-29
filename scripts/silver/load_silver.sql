@@ -203,3 +203,118 @@ FROM bronze.crm_product_info;
 -- FROM silver.crm_product_info
 -- WHERE prd_end_dt IS NOT NULL
 -- ORDER BY prd_key, prd_start_dt;
+
+-- =============================================================
+-- DDL + Load Silver Layer - CRM: crm_ventas_detalles
+-- =============================================================
+-- Descripción : Limpieza y transformación de datos de ventas
+--               desde Bronze hacia Silver.
+-- Tabla origen : bronze.crm_ventas_detalles
+-- Tabla destino: silver.crm_ventas_detalles
+-- Transformaciones aplicadas:
+--   1. Conversión de fechas enteras (YYYYMMDD) a tipo DATE
+--   2. Fechas inválidas (0 o longitud != 8) → NULL
+--   3. Recálculo de vts_sales si es NULL, <= 0 o inconsistente
+--   4. Recálculo de vts_precio si es NULL o <= 0
+-- =============================================================
+
+-- Borrado y creación de tabla para cambiar los tipos de dato de las fechas a DATE
+DROP TABLE IF EXISTS silver.crm_ventas_detalles;
+CREATE TABLE silver.crm_ventas_detalles (
+    vts_ord_num      VARCHAR(50),
+    vts_prd_key      VARCHAR(50),
+    vts_cl_id        INT,
+    vts_order_dt     DATE,        -- cambiado de INT a DATE
+    vts_ship_dt      DATE,        -- cambiado de INT a DATE
+    vts_due_dt       DATE,        -- cambiado de INT a DATE
+    vts_sales        INT,
+    vts_cantidad     INT,
+    vts_precio       INT,
+    dwh_fec_creacion TIMESTAMP DEFAULT NOW()
+);
+
+-- -------------------------------------------------------------
+-- Validación previa
+-- -------------------------------------------------------------
+
+-- Revisar fechas con formato inválido
+ --SELECT DISTINCT vts_order_dt FROM bronze.crm_ventas_detalles
+ --WHERE vts_order_dt = 0 OR LENGTH(vts_order_dt::TEXT) != 8;
+
+-- Revisar ventas inconsistentes (sales != cantidad * precio)
+--SELECT * FROM bronze.crm_ventas_detalles
+ --WHERE vts_sales != vts_cantidad * ABS(vts_precio)
+   -- OR vts_sales IS NULL OR vts_sales <= 0;
+
+-- Revisar precios inválidos
+-- SELECT * FROM bronze.crm_ventas_detalles
+ -- WHERE vts_precio IS NULL OR vts_precio <= 0;
+
+-- -------------------------------------------------------------
+-- Carga a Silver
+-- -------------------------------------------------------------
+
+TRUNCATE TABLE silver.crm_ventas_detalles;
+
+INSERT INTO silver.crm_ventas_detalles (
+    vts_ord_num,
+    vts_prd_key,
+    vts_cl_id,
+    vts_order_dt,
+    vts_ship_dt,
+    vts_due_dt,
+    vts_sales,
+    vts_cantidad,
+    vts_precio
+)
+SELECT
+    vts_ord_num,
+    vts_prd_key,
+    vts_cl_id,
+    -- Convierte entero YYYYMMDD a DATE; si es 0 o longitud inválida → NULL
+    CASE
+        WHEN vts_order_dt = 0 OR LENGTH(vts_order_dt::TEXT) != 8 THEN NULL
+        ELSE TO_DATE(vts_order_dt::TEXT, 'YYYYMMDD')
+    END AS vts_order_dt,
+    CASE
+        WHEN vts_ship_dt = 0 OR LENGTH(vts_ship_dt::TEXT) != 8 THEN NULL
+        ELSE TO_DATE(vts_ship_dt::TEXT, 'YYYYMMDD')
+    END AS vts_ship_dt,
+    CASE
+        WHEN vts_due_dt = 0 OR LENGTH(vts_due_dt::TEXT) != 8 THEN NULL
+        ELSE TO_DATE(vts_due_dt::TEXT, 'YYYYMMDD')
+    END AS vts_due_dt,
+    -- Recalcula vts_sales si es NULL, <= 0 o no coincide con cantidad * precio
+    CASE
+        WHEN vts_sales IS NULL OR vts_sales <= 0
+          OR vts_sales != vts_cantidad * ABS(vts_precio)
+            THEN vts_cantidad * ABS(vts_precio)
+        ELSE vts_sales
+    END AS vts_sales,
+    vts_cantidad,
+    -- Recalcula vts_precio si es NULL o <= 0
+    CASE
+        WHEN vts_precio IS NULL OR vts_precio <= 0
+            THEN vts_sales / NULLIF(vts_cantidad, 0)
+        ELSE vts_precio
+    END AS vts_precio
+FROM bronze.crm_ventas_detalles;
+
+-- -------------------------------------------------------------
+-- Validación posterior
+-- -------------------------------------------------------------
+
+-- Verificar filas cargadas
+-- SELECT COUNT(*) FROM silver.crm_ventas_detalles;
+
+-- Verificar que no quedan fechas inválidas
+-- SELECT * FROM silver.crm_ventas_detalles
+-- WHERE vts_order_dt IS NULL OR vts_ship_dt IS NULL;
+
+-- Verificar consistencia sales = cantidad * precio
+-- SELECT * FROM silver.crm_ventas_detalles
+-- WHERE vts_sales != vts_cantidad * vts_precio;
+
+-- Verificar que no hay precios ni ventas negativos o nulos
+-- SELECT * FROM silver.crm_ventas_detalles
+-- WHERE vts_precio <= 0 OR vts_sales <= 0;
