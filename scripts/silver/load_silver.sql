@@ -70,6 +70,7 @@ FROM (
             ORDER BY cl_fec_creacion DESC
         ) AS ranking
     FROM bronze.crm_cliente_info
+    WHERE cl_id IS NOT NULL
 ) sub
 WHERE ranking = 1;
  
@@ -361,6 +362,7 @@ SELECT
     -- Fechas de nacimiento futuras → NULL
     CASE
         WHEN fec_nac > NOW() THEN NULL
+        WHEN fec_nac < '1924-01-01'   THEN NULL
         ELSE fec_nac
     END AS fec_nac,
     -- Normalización de género
