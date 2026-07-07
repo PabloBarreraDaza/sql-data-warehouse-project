@@ -71,24 +71,17 @@ data-warehouse-project/
 ├── datasets/                       # Datasets raw del proyecto (ERP y CRM)
 │
 ├── docs/                           # Documentación y arquitectura
-│   ├── etl.drawio                  # Técnicas y métodos ETL
-│   ├── data_architecture.drawio    # Arquitectura del proyecto
 │   ├── data_catalog.md             # Catálogo de datasets con descripciones y metadatos
-│   ├── data_flow.drawio            # Diagrama de flujo de datos
-│   ├── data_models.drawio          # Modelos de datos (esquema estrella)
-│   └── naming-conventions.md      # Guía de nomenclatura para tablas, columnas y archivos
 │
 ├── scripts/                        # Scripts SQL para ETL y transformaciones
-│   ├── bronze/                     # Extracción y carga de datos raw
+│   ├── bronce/                     # Extracción y carga de datos raw
 │   ├── silver/                     # Limpieza y transformación
 │   └── gold/                       # Creación de modelos analíticos
 │
 ├── tests/                          # Scripts de prueba y calidad
 │
 ├── README.md
-├── LICENSE
-├── .gitignore
-└── requirements.txt
+
 ```
 
 
